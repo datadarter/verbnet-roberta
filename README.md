@@ -1,6 +1,6 @@
-# Semantic Feature Tagging with RoBERTa
+# Semantic Feature Labelling with RoBERTa
 
-This repository contains the code for an AIML339 research project investigating **multi-label semantic feature tagging of English nouns and proper nouns**. It constructs a labelled dataset using Universal Dependencies (UD) English Web Treebank (EWT), WordNet word-sense disambiguation (WSD), supplementary LLM annotation, and a semantic-feature inheritance hierarchy. A fine-tuned **RoBERTa-large** model predicts semantic features at token level. A **GLiNER2.5** approach is evaluated as a comparison baseline.
+This repository contains the code for an AIML339 research project investigating **multi-label semantic feature labelling of English nouns and proper nouns**. It constructs a labelled dataset using Universal Dependencies (UD) English Web Treebank (EWT), WordNet word-sense disambiguation (WSD), supplementary LLM labelling, and a semantic-feature inheritance hierarchy. A fine-tuned **RoBERTa-large** model predicts semantic features at token level. A **GLiNER2.5** approach is evaluated as a comparison baseline.
 
 
 ## 1. Repository structure
@@ -59,6 +59,7 @@ Keep its original training and test partitions distinct. The data-processing not
 ### 3.2 Generate semantic annotations
 
 Run the data-preparation notebook: **AIML339 Selectional Restriction Tagger.ipynb**
+NB: This took several weeks to label the corpus.
 
 ## 4. Train RoBERTa-large
 
@@ -71,10 +72,10 @@ Open **AIML339 RoBERTa fine tune.ipynb** and run the first cell after adjusting 
 -- Validation set: 2313 sentences, 8,733 labelled tokens: 6,356 nouns, 2,377 proper nouns
 -- Test set: 1759 sentences, 5,704 labelled tokens: 3,712 nouns, 1,992 proper nouns
 
-- Initialises the pretrained `FacebookAI/roberta-large` backbone.
-- Builds token-aligned, multi-label targets for eligible `NOUN`/`PROPN` tokens.
-- Trains the **independent semantic features** and restores inherited labels via deterministic hierarchy expansion.
-- Uses validation metrics to select checkpoints and calibrates **per-feature decision thresholds on validation data only**.
+- Initialises the pretrained `FacebookAI/roberta-large` base model.
+- Builds multi-label targets for eligible `NOUN`/`PROPN` tokens.
+- Trains the **independent semantic features** and backfills inherited labels via the deterministic hierarchy.
+- Uses validation metrics to calibrates **per-feature decision thresholds on validation data only**.
 - Repeats training with the fixed list of 30 seeds below and aggregates the test results.
 
 ```python
@@ -92,7 +93,7 @@ The reusable inference checkpoint is expected under a path such as `../models/ro
 |---|---|
 | Base checkpoint | `FacebookAI/roberta-large` |
 | Task | Multi-label token classification (`NOUN` / `PROPN`) |
-| Training targets | Independent feature labels, followed by deterministic hierarchy expansion |
+| Training targets | Independent feature labels, followed by deterministic hierarchy inheritance |
 | Random seeds | The 30 values listed above |
 | Split | Sentence-level; validation derived from EWT train; EWT test held out |
 | Learning rate | 4.0e-05 |
@@ -100,9 +101,9 @@ The reusable inference checkpoint is expected under a path such as `../models/ro
 | Gradient accumulation | 4 |
 | Effective batch size | 16 |
 | Epochs | 5 |
-| Warm-up and weight decay | 278 and 0.01 |
-| Threshold calibration | Per-feature, validation-only |
-| Disabled features (if any) | "State", "State_of_Matter", "Shape", "Rigidity" |
+| Warm-up steps and weight decay | 278 (10% of total steps) and 0.01 |
+| Threshold calibration | Per-feature, validation set only |
+| Disabled features | "State", "State_of_Matter", "Shape", "Rigidity" |
 
 
 ## 5. Evaluation
@@ -111,16 +112,16 @@ The reusable inference checkpoint is expected under a path such as `../models/ro
 
 The first cell in **AIML339 RoBERTa fine tune.ipynb** also reports the evaluation metrics.
 
-- Evaluates each run's validation-selected checkpoint on the held-out EWT test set.
-- Reports the **0.5 threshold** results as a diagnostic and the **validation-calibrated threshold** results as the primary evaluation.
-- Restores hierarchy inherited features before evaluating the *complete-hierarchy* metric; retain *independent-feature* metrics as a separate informational tool.
+- Evaluates each run on the held-out EWT test set.
+- Reports the **0.5 threshold** results for comparison and the **validation-calibrated threshold** results as the primary evaluation.
+- Restores hierarchy inherited features before evaluating the *complete-hierarchy* metric; retains *independent-feature* metrics as a separate informational tool.
 - Computes micro and macro precision, recall and F1, with per-feature breakdowns.
-- Aggregates scores across the same 30 seeds, reporting **mean ± standard deviation** and computes sentence-cluster bootstrap confidence intervals where reported.
+- Aggregates scores across the same 30 seeds, reporting **mean ± standard deviation** and computes sentence-level bootstrap confidence intervals.
 
 
 ### 5.2 GLiNER2.5 baseline
 
-Open **AIML GliNER2.5 classifier.ipynb** and run the baseline with the **same held-out test records, eligible token criteria, feature inventory and hierarchy** used for RoBERTa. The baseline uses validation data for any threshold calibration.
+Open **AIML GliNER2.5 classifier.ipynb** and run the baseline with the same datasets as the RoBERTa model. The baseline uses validation data for any threshold calibration.
 
 ### 5.3 Interpreting the reported metrics
 
@@ -129,7 +130,7 @@ Open **AIML GliNER2.5 classifier.ipynb** and run the baseline with the **same he
 | Micro F1 | Aggregates true positives, false positives and false negatives across features |
 | Macro F1 | Unweighted mean of per-feature F1 scores; gives uncommon features equal importance |
 | Mean ± SD | Variation between training runs with different random seeds |
-| Sentence-cluster bootstrap CI | Sampling uncertainty estimated by resampling sentences, keeping token dependence within each sentence |
+| Sentence-level bootstrap CI | Sampling uncertainty estimated by resampling sentences, keeping linguistic context within each sentence |
 
 ## 6. Matching the final report results
 
@@ -149,3 +150,4 @@ UD English EWT, WordNet and the pretrained model are externally maintained resou
 - [Princeton WordNet](https://wordnet.princeton.edu/)
 - [RoBERTa / Hugging Face Transformers](https://huggingface.co/FacebookAI/roberta-large)
 - [GLiNER2.5](https://huggingface.co/fastino/gliner2.5-base-v1)
+- [Qwen3.8 27B](https://huggingface.co/Qwen/Qwen3.8-27B)
