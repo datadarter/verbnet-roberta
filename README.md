@@ -29,14 +29,12 @@ source .venv/bin/activate
 python -m pip install --upgrade pip
 ```
 
-Install a **CUDA-compatible PyTorch build** using the instructions at https://pytorch.org/get-started/locally/ and then install the project's other dependencies. 
-
-The pipeline uses the following packages or components; the list should be reconciled against the notebook imports and pinned in `requirements.txt` before submission:
+Install a **CUDA-compatible PyTorch build** using the instructions at https://pytorch.org/get-started/locally/ and then install the project's other dependencies.
 
 ```bash
 python -m pip install transformers datasets accelerate scikit-learn \
     numpy pandas scipy nltk spacy conllu tqdm matplotlib \
-    jupyter ipykernel gliner2[local] openai
+    jupyter ipykernel gliner2[local] openai iterative-stratification
 python -m spacy download en_core_web_sm
 ```
 
@@ -64,14 +62,14 @@ Run the data-preparation notebook: **AIML339 Selectional Restriction Tagger.ipyn
 
 ## 4. Train RoBERTa-large
 
-Open **AIML339 RoBERTa fine tune.ipynb** and run its cells from top to bottom after adjusting the input and output directories. The training implementation:
+Open **AIML339 RoBERTa fine tune.ipynb** and run the first cell after adjusting the input and output directories. The training implementation:
+
 
 - Creates a **sentence-level** training/validation split from the original EWT training partition; keeps the original EWT test partition held out until final evaluation.
-
-Split seed: 42
-Training set: 8,885 sentences, 34,895 labelled tokens: 25,277 nouns, 9,618 proper nouns
-Validation set: 2313 sentences, 8,733 labelled tokens: 6,356 nouns, 2,377 proper nouns
-Test set: 1759 sentences, 5,704 labelled tokens: 3,712 nouns, 1,992 proper nouns
+-- Split seed: 42
+-- Training set: 8,885 sentences, 34,895 labelled tokens: 25,277 nouns, 9,618 proper nouns
+-- Validation set: 2313 sentences, 8,733 labelled tokens: 6,356 nouns, 2,377 proper nouns
+-- Test set: 1759 sentences, 5,704 labelled tokens: 3,712 nouns, 1,992 proper nouns
 
 - Initialises the pretrained `FacebookAI/roberta-large` backbone.
 - Builds token-aligned, multi-label targets for eligible `NOUN`/`PROPN` tokens.
@@ -87,8 +85,7 @@ RUN_SEEDS = [
 ]
 ```
 
-The reusable inference checkpoint is expected under a path such as `../models/roberta_semantic_features/reference_model`, with `semantic_features.json` and `prediction_thresholds.json` alongside it. **[VERIFY]** Confirm which model-selection rule and output directory the final training run actually uses.
-
+The reusable inference checkpoint is expected under a path such as `../models/roberta_semantic_features/reference_model`, with `semantic_features.json` and `prediction_thresholds.json` alongside it.
 ### Training configuration for the main reported experiment
 
 | Parameter | Main experiment |
@@ -112,52 +109,41 @@ The reusable inference checkpoint is expected under a path such as `../models/ro
 
 ### 5.1 RoBERTa
 
-Run the evaluation/reporting section of the fine-tuning notebook after training. The intended procedure is:
+The first cell in **AIML339 RoBERTa fine tune.ipynb** also reports the evaluation metrics.
 
-1. Evaluate each run's validation-selected checkpoint on the held-out EWT test set.
-2. Report the **0.5 threshold** results as a diagnostic and the **validation-calibrated threshold** results as the primary evaluation, if this is how the final report defines the primary method.
-3. Restore hierarchy-inherited features before evaluating the *complete-hierarchy* metric; retain *independent-feature* metrics as a separate diagnostic.
-4. Compute micro- and macro-averaged precision, recall and F1, with per-feature breakdowns.
-5. Aggregate scores across the same 30 seeds, reporting **mean ± standard deviation**; compute sentence-cluster bootstrap confidence intervals where reported.
+- Evaluates each run's validation-selected checkpoint on the held-out EWT test set.
+- Reports the **0.5 threshold** results as a diagnostic and the **validation-calibrated threshold** results as the primary evaluation.
+- Restores hierarchy inherited features before evaluating the *complete-hierarchy* metric; retain *independent-feature* metrics as a separate informational tool.
+- Computes micro and macro precision, recall and F1, with per-feature breakdowns.
+- Aggregates scores across the same 30 seeds, reporting **mean ± standard deviation** and computes sentence-cluster bootstrap confidence intervals where reported.
 
-Scores obtained from independent labels and scores obtained after hierarchy expansion are **different evaluation conditions** and should never be combined into one average.
 
 ### 5.2 GLiNER2.5 baseline
 
-Open **[VERIFY: GLiNER baseline notebook filename]** and run the baseline with the **same held-out test records, eligible token criteria, feature inventory and hierarchy** used for RoBERTa. The baseline uses validation data for any threshold calibration. Check whether the final report used target-conditioned classification or span extraction with entity attributes; these are distinct GLiNER variants.
-
-**[VERIFY]** Record the precise pretrained GLiNER checkpoint, classification/extraction approach, context window, threshold strategy, random seeds/repetitions (if any), and final scores. Do not describe one deterministic inference run as 30 independent training runs.
+Open **AIML GliNER2.5 classifier.ipynb** and run the baseline with the **same held-out test records, eligible token criteria, feature inventory and hierarchy** used for RoBERTa. The baseline uses validation data for any threshold calibration.
 
 ### 5.3 Interpreting the reported metrics
 
 | Metric | Interpretation |
 |---|---|
-| Micro F1 | Aggregates true positives, false positives and false negatives across feature decisions |
-| Macro F1 | Unweighted mean of per-feature F1 scores; gives uncommon features equal influence |
-| Mean ± SD | Variation between independently seeded training runs, not a bootstrap confidence interval |
-| Sentence-cluster bootstrap CI | Sampling uncertainty estimated by resampling sentences, preserving token dependence within each sentence |
+| Micro F1 | Aggregates true positives, false positives and false negatives across features |
+| Macro F1 | Unweighted mean of per-feature F1 scores; gives uncommon features equal importance |
+| Mean ± SD | Variation between training runs with different random seeds |
+| Sentence-cluster bootstrap CI | Sampling uncertainty estimated by resampling sentences, keeping token dependence within each sentence |
 
 ## 6. Matching the final report results
 
-Before submitting, complete this table from the **final report and saved experiment logs**:
-
-| Report result / table | System | Experiment file / configuration | Output file / figure |
+| Report result | System | Experiment file | Output figure |
 |---|---|---|---|
-| Main 30-seed performance | RoBERTa-large | **[VERIFY: notebook, config, dataset revision]** | **[VERIFY]** |
-| Per-feature performance | RoBERTa-large | **[VERIFY: thresholds and hierarchy setting]** | **[VERIFY]** |
-| Baseline comparison | GLiNER2.5 | **[VERIFY: approach, pretrained checkpoint, thresholds]** | **[VERIFY]** |
-| Threshold / ablation results (if included) | **[VERIFY]** | **[VERIFY]** | **[VERIFY]** |
+| Main 30-seed performance | RoBERTa-large | **AIML339 RoBERTa fine tune.ipynb** | REPEATED-RUN TEST SUMMARY table |
+| Per-feature performance | RoBERTa-large | **AIML339 RoBERTa fine tune.ipynb** | REPEATED-RUN TEST PERFORMANCE BY COMPLETE FEATURE (AFTER INHERITANCE) table |
+| Baseline comparison | GLiNER2.5 | **AIML GliNER2.5 classifier.ipynb** | TEST PERFORMANCE WITH VALIDATION-OPTIMISED THRESHOLDS — COMPLETE HIERARCHY table and TEST PERFORMANCE BY COMPLETE FEATURE (AFTER INHERITANCE) table |
 
-For each entry, record the Git commit, package environment, dataset version/hash, seed list, checkpoint-selection criterion, calibration method and precise test metric definition. Where available, attach machine-readable result tables rather than relying only on notebook printouts.
+## 7. Data availability and licensing
 
+UD English EWT, WordNet and the pretrained model are externally maintained resources with their own licences or distribution terms. They are not included in this repository.
 
-## 8. Data availability, licensing and limitations
-
-UD English EWT, WordNet and the pretrained model are externally maintained resources with their own licences or distribution terms. Download them from their official sources rather than assuming they are included in this repository. Generated WSD caches and annotated datasets may be too large or unsuitable to redistribute; where they are not committed, rebuilding the annotations may require the original LLM checkpoint, prompts and inference configuration.
-
-The annotation process can propagate errors from WSD, LLM labelling and hierarchy rules. This is a research prototype trained and evaluated primarily on English EWT, not a general-purpose semantic parser or a validated multilingual system.
-
-## 9. Acknowledgements
+## 8. Acknowledgements
 
 - [Universal Dependencies — English EWT](https://github.com/UniversalDependencies/UD_English-EWT)
 - [Princeton WordNet](https://wordnet.princeton.edu/)
