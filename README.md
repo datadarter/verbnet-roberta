@@ -17,7 +17,7 @@ Trained weights, caches and large processed datasets are excluded from the repos
 
 ## 2. Requirements and installation
 
-- **Python:** 3.9.21-compatible environment recommended;
+- **Python:** 3.10-compatible environment recommended;
 - **GPU:** CUDA-capable NVIDIA GPU recommended for RoBERTa-large and GLiNER2.5. CPU execution is possible for some preparation steps but model training will be substantially slower.
 - **External resources:** UD English EWT, NLTK WordNet, pretrained `FacebookAI/roberta-large`, and the LLM used for WSD/supplementary labelling.
 
@@ -141,13 +141,11 @@ Open **AIML GliNER2.5 classifier.ipynb** and run the baseline with the **same he
 
 ## 7. Data availability and licensing
 
-UD English EWT, WordNet and the pretrained model are externally maintained resources with their own licences or distribution terms. They are not included in this repository.
+UD English EWT, WordNet and the pretrained model are externally maintained resources with their own licences. They are not included in this repository.
 
 ## 8. Acknowledgements
 
 - [Universal Dependencies — English EWT](https://github.com/UniversalDependencies/UD_English-EWT)
 - [Princeton WordNet](https://wordnet.princeton.edu/)
 - [RoBERTa / Hugging Face Transformers](https://huggingface.co/FacebookAI/roberta-large)
-- [GLiNER](https://github.com/urchade/GLiNER) — confirm the exact GLiNER2.5 implementation used
-
-See the accompanying AIML339 final report for methodological discussion, experimental findings and full academic references.
+- [GLiNER2.5](https://huggingface.co/fastino/gliner2.5-base-v1)
